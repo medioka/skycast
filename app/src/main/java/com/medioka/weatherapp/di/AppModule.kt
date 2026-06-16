@@ -17,10 +17,15 @@ import org.koin.android.ext.koin.androidContext
 
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.viewModelOf
+import com.medioka.weatherapp.ui.home.HomeViewModel
+import com.medioka.weatherapp.ui.map.MapViewModel
 import org.koin.dsl.bind
+
 import org.koin.dsl.module
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
+
 
 val networkModule = module {
     single {
@@ -82,9 +87,15 @@ val useCaseModule = module {
     factoryOf(::GetSavedWeatherUseCase)
 }
 
+val viewModelModule = module {
+    viewModelOf(::HomeViewModel)
+    viewModelOf(::MapViewModel)
+}
+
 val appModule = listOf(
     networkModule,
     databaseModule,
     repositoryModule,
-    useCaseModule
+    useCaseModule,
+    viewModelModule
 )
