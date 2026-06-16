@@ -33,6 +33,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -68,6 +69,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
 
     // Trigger load of default coordinates (e.g. London) on launch
     LaunchedEffect(Unit) {
@@ -140,29 +142,47 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                when (val state = uiState) {
-                    is HomeUiState.Loading -> {
-                        DashboardSkeleton()
-                    }
-                    is HomeUiState.Success -> {
-                        DashboardContent(
-                            weatherInfo = state.weatherInfo,
-                            isOffline = state.isOffline,
-                            onRefresh = {
-                                viewModel.fetchWeather(
-                                    state.weatherInfo.coordinate.latitude,
-                                    state.weatherInfo.coordinate.longitude
-                                )
-                            }
-                        )
-                    }
-                    is HomeUiState.Error -> {
-                        DashboardErrorView(
-                            message = state.message,
-                            onRetry = {
-                                viewModel.fetchWeather(51.5074, -0.1278)
-                            }
-                        )
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = {
+                        val state = uiState
+                        if (state is HomeUiState.Success) {
+                            viewModel.fetchWeather(
+                                state.weatherInfo.coordinate.latitude,
+                                state.weatherInfo.coordinate.longitude
+                            )
+                        } else {
+                            viewModel.fetchWeather(51.5074, -0.1278)
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    when (val state = uiState) {
+                        is HomeUiState.Loading -> {
+                            DashboardSkeleton()
+                        }
+                        is HomeUiState.Success -> {
+                            DashboardContent(
+                                weatherInfo = state.weatherInfo,
+                                isOffline = state.isOffline,
+                                onRefresh = {
+                                    viewModel.fetchWeather(
+                                        state.weatherInfo.coordinate.latitude,
+                                        state.weatherInfo.coordinate.longitude
+                                    )
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        is HomeUiState.Error -> {
+                            DashboardErrorView(
+                                message = state.message,
+                                onRetry = {
+                                    viewModel.fetchWeather(51.5074, -0.1278)
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
             }
@@ -264,11 +284,33 @@ private fun DashboardContent(
                     }
                 }
 
-                // Weather Illustration Canvas Widget
-                WeatherIllustration(
-                    conditionCode = weatherInfo.conditionCode,
-                    modifier = Modifier.size(110.dp)
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Weather Illustration Canvas Widget
+                    WeatherIllustration(
+                        conditionCode = weatherInfo.conditionCode,
+                        modifier = Modifier.size(110.dp)
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = "GPS Pin",
+                            tint = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            text = "${"%.4f".format(weatherInfo.coordinate.latitude)}, ${"%.4f".format(weatherInfo.coordinate.longitude)}",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Light
+                        )
+                    }
+                }
             }
         }
 

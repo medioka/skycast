@@ -1,5 +1,10 @@
 package com.medioka.weatherapp.data.repository
 
+import android.content.Context
+import android.location.Geocoder
+import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.medioka.weatherapp.data.local.dao.WeatherDao
 import com.medioka.weatherapp.data.local.entity.ForecastCacheEntity
 import com.medioka.weatherapp.data.local.entity.WeatherCacheEntity
@@ -14,7 +19,8 @@ import kotlinx.coroutines.flow.map
 
 class WeatherRepositoryImpl(
     private val apiService: WeatherApiService,
-    private val weatherDao: WeatherDao
+    private val weatherDao: WeatherDao,
+    private val context: Context
 ) : WeatherRepository {
 
     override fun getWeather(latitude: Double, longitude: Double): Flow<Result<WeatherInfo>> = flow {
@@ -29,7 +35,7 @@ class WeatherRepositoryImpl(
         // 2. Perform network refresh
         try {
             val response = apiService.getWeatherForecast(latitude, longitude)
-            val cityName = "Lat: ${"%.2f".format(latitude)}, Lon: ${"%.2f".format(longitude)}"
+            val cityName = getCityName(latitude, longitude)
             val freshWeather = response.toDomain(cityName)
 
             // Cache it in Room (triggers updates on active database observers)
@@ -40,6 +46,23 @@ class WeatherRepositoryImpl(
         } catch (e: Exception) {
             // If network fails but we have cached data, we can emit failure but the cache is already emitted.
             emit(Result.failure(e))
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private suspend fun getCityName(latitude: Double, longitude: Double): String = withContext(Dispatchers.IO) {
+        try {
+            val geocoder = Geocoder(context, Locale.getDefault())
+            val addresses = geocoder.getFromLocation(latitude, longitude, 1)
+            val address = addresses?.firstOrNull()
+            address?.locality 
+                ?: address?.subAdminArea 
+                ?: address?.adminArea 
+                ?: address?.subLocality
+                ?: address?.featureName 
+                ?: "Location (${"%.2f".format(latitude)}, ${"%.2f".format(longitude)})"
+        } catch (e: Exception) {
+            "Location (${"%.2f".format(latitude)}, ${"%.2f".format(longitude)})"
         }
     }
 

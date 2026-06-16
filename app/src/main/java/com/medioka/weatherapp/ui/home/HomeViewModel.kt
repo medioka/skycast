@@ -15,10 +15,18 @@ class HomeViewModel(
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     fun fetchWeather(latitude: Double, longitude: Double) {
         viewModelScope.launch {
-            _uiState.value = HomeUiState.Loading
+            if (_uiState.value !is HomeUiState.Success) {
+                _uiState.value = HomeUiState.Loading
+            } else {
+                _isRefreshing.value = true
+            }
             getWeatherUseCase(latitude, longitude).collect { result ->
+                _isRefreshing.value = false
                 result.fold(
                     onSuccess = { weatherInfo ->
                         // Cache fetch will emit first, followed by network success
