@@ -1,5 +1,11 @@
 package com.medioka.weatherapp.ui.map
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationManager
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
@@ -31,6 +36,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +66,55 @@ fun MapScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    var mapViewRef by remember { mutableStateOf<MapView?>(null) }
+
+    val refocusToUserLocation = {
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        
+        if (hasFine || hasCoarse) {
+            try {
+                val isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                val isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+                
+                val provider = when {
+                    isGpsEnabled -> LocationManager.GPS_PROVIDER
+                    isNetworkEnabled -> LocationManager.NETWORK_PROVIDER
+                    else -> null
+                }
+                
+                if (provider != null) {
+                    val location = locationManager.getLastKnownLocation(provider)
+                    if (location != null) {
+                        val geoPoint = GeoPoint(location.latitude, location.longitude)
+                        mapViewRef?.controller?.animateTo(geoPoint)
+                        mapViewRef?.controller?.setZoom(14.0)
+                        viewModel.updateLocation(location.latitude, location.longitude)
+                    } else {
+                        locationManager.requestLocationUpdates(
+                            provider,
+                            0L,
+                            0f,
+                            object : android.location.LocationListener {
+                                override fun onLocationChanged(loc: Location) {
+                                    val geoPoint = GeoPoint(loc.latitude, loc.longitude)
+                                    mapViewRef?.controller?.animateTo(geoPoint)
+                                    mapViewRef?.controller?.setZoom(14.0)
+                                    viewModel.updateLocation(loc.latitude, loc.longitude)
+                                    locationManager.removeUpdates(this)
+                                }
+                                override fun onProviderEnabled(provider: String) {}
+                                override fun onProviderDisabled(provider: String) {}
+                            }
+                        )
+                    }
+                }
+            } catch (e: SecurityException) {
+                // Ignore security exceptions
+            }
+        }
+    }
 
     // Setup OSMDroid user agent configuration
     LaunchedEffect(Unit) {
@@ -75,6 +131,7 @@ fun MapScreen(
                     controller.setZoom(12.0)
                     val startPoint = GeoPoint(uiState.latitude, uiState.longitude)
                     controller.setCenter(startPoint)
+                    mapViewRef = this
 
                     // Track scroll zoom stops to update center coordinates in viewmodel
                     addMapListener(object : org.osmdroid.events.MapListener {
@@ -120,13 +177,10 @@ fun MapScreen(
             }
         }
 
-        // 3. Floating Search and Back Bar (Top Layer)
-        Row(
+        // 3. Floating Back Button (Top Layer)
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 48.dp, start = 24.dp, end = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(top = 48.dp, start = 24.dp)
         ) {
             // Glass Back Button
             Box(
@@ -144,30 +198,28 @@ fun MapScreen(
                     )
                 }
             }
+        }
 
-            // Glass Search Bar
-            Row(
+        // 3.5. GPS Refocus Button
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 280.dp, end = 24.dp)
+        ) {
+            Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(24.dp))
-                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .size(48.dp)
+                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
+                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(50)),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search Selector",
-                    tint = Color.White.copy(alpha = 0.6f),
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Move map to choose point",
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 14.sp,
-                    modifier = Modifier.weight(1f)
-                )
+                IconButton(onClick = { refocusToUserLocation() }) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Refocus to GPS",
+                        tint = Primary
+                    )
+                }
             }
         }
 
