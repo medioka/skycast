@@ -8,6 +8,7 @@ import android.location.LocationManager
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -116,9 +117,34 @@ fun MapScreen(
         }
     }
 
-    // Setup OSMDroid user agent configuration
+    // Setup OSMDroid user agent configuration and center map on current GPS location if available
     LaunchedEffect(Unit) {
         Configuration.getInstance().userAgentValue = context.packageName
+        
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (hasFine || hasCoarse) {
+            try {
+                val isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                val isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+                val provider = when {
+                    isGpsEnabled -> LocationManager.GPS_PROVIDER
+                    isNetworkEnabled -> LocationManager.NETWORK_PROVIDER
+                    else -> null
+                }
+                if (provider != null) {
+                    val location = locationManager.getLastKnownLocation(provider)
+                    if (location != null) {
+                        viewModel.updateLocation(location.latitude, location.longitude)
+                        mapViewRef?.controller?.setCenter(GeoPoint(location.latitude, location.longitude))
+                        mapViewRef?.controller?.setZoom(12.0)
+                    }
+                }
+            } catch (e: SecurityException) {
+                // Ignore security exceptions
+            }
+        }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -271,7 +297,10 @@ fun MapScreen(
                         modifier = Modifier
                             .size(56.dp)
                             .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
-                            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp)),
+                            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                            .clickable(enabled = !uiState.isSearching) {
+                                viewModel.fetchWeatherForCurrentLocation()
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         if (uiState.isSearching) {
@@ -281,12 +310,21 @@ fun MapScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text(
-                                text = uiState.temperature,
-                                color = Primary,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            if (uiState.temperature == "?") {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Fetch Temperature",
+                                    tint = Primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            } else {
+                                Text(
+                                    text = uiState.temperature,
+                                    color = Primary,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }

@@ -19,22 +19,29 @@ class MapViewModel(
         _uiState.value = _uiState.value.copy(
             latitude = latitude,
             longitude = longitude,
-            isSearching = true
+            temperature = "?",
+            cityName = "Selected Coordinate",
+            isSearching = false
         )
+    }
+
+    fun fetchWeatherForCurrentLocation() {
+        val latitude = _uiState.value.latitude
+        val longitude = _uiState.value.longitude
+        _uiState.value = _uiState.value.copy(isSearching = true)
         viewModelScope.launch {
-            // Fetch preview weather for bottom sheet detail
             getWeatherUseCase(latitude, longitude).collect { result ->
                 result.fold(
                     onSuccess = { weatherInfo ->
                         _uiState.value = _uiState.value.copy(
-                            cityName = "Selected Coordinate",
+                            cityName = weatherInfo.cityName,
                             temperature = "${weatherInfo.temperature.toInt()}°",
                             isSearching = false
                         )
                     },
                     onFailure = {
                         _uiState.value = _uiState.value.copy(
-                            cityName = "Coordinate Loaded",
+                            cityName = "Error loading temp",
                             temperature = "--°",
                             isSearching = false
                         )
