@@ -92,6 +92,7 @@ fun MapScreen(
                         mapViewRef?.controller?.animateTo(geoPoint)
                         mapViewRef?.controller?.setZoom(14.0)
                         viewModel.updateLocation(location.latitude, location.longitude)
+                        viewModel.fetchWeatherForCurrentLocation()
                     } else {
                         locationManager.requestLocationUpdates(
                             provider,
@@ -103,6 +104,7 @@ fun MapScreen(
                                     mapViewRef?.controller?.animateTo(geoPoint)
                                     mapViewRef?.controller?.setZoom(14.0)
                                     viewModel.updateLocation(loc.latitude, loc.longitude)
+                                    viewModel.fetchWeatherForCurrentLocation()
                                     locationManager.removeUpdates(this)
                                 }
                                 override fun onProviderEnabled(provider: String) {}
@@ -137,6 +139,7 @@ fun MapScreen(
                     val location = locationManager.getLastKnownLocation(provider)
                     if (location != null) {
                         viewModel.updateLocation(location.latitude, location.longitude)
+                        viewModel.fetchWeatherForCurrentLocation()
                         mapViewRef?.controller?.setCenter(GeoPoint(location.latitude, location.longitude))
                         mapViewRef?.controller?.setZoom(12.0)
                     }
