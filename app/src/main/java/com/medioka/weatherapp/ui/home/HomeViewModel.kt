@@ -8,9 +8,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+import com.medioka.weatherapp.domain.repository.WeatherRepository
+
 class HomeViewModel(
-    private val getWeatherUseCase: GetWeatherUseCase
+    private val getWeatherUseCase: GetWeatherUseCase,
+    private val weatherRepository: WeatherRepository
 ) : ViewModel() {
+
+    fun getDefaultCoordinates(): Pair<Double, Double> {
+        return weatherRepository.getDefaultLocation() ?: Pair(51.5074, -0.1278)
+    }
 
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()

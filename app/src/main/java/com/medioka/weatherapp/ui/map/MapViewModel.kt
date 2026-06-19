@@ -3,16 +3,23 @@ package com.medioka.weatherapp.ui.map
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.medioka.weatherapp.domain.usecase.GetWeatherUseCase
+import com.medioka.weatherapp.domain.repository.WeatherRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class MapViewModel(
-    private val getWeatherUseCase: GetWeatherUseCase
+    private val getWeatherUseCase: GetWeatherUseCase,
+    private val weatherRepository: WeatherRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(MapUiState())
+    private val _uiState = MutableStateFlow(
+        MapUiState(
+            latitude = weatherRepository.getDefaultLocation()?.first ?: 51.5074,
+            longitude = weatherRepository.getDefaultLocation()?.second ?: -0.1278
+        )
+    )
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
 
     fun updateLocation(latitude: Double, longitude: Double) {

@@ -71,9 +71,10 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
 
-    // Trigger load of default coordinates (e.g. London) on launch
+    // Trigger load of default coordinates (last successfully chosen, or London) on launch
     LaunchedEffect(Unit) {
-        viewModel.fetchWeather(51.5074, -0.1278)
+        val coords = viewModel.getDefaultCoordinates()
+        viewModel.fetchWeather(coords.first, coords.second)
     }
 
     Box(

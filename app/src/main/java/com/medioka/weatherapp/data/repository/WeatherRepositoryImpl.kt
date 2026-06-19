@@ -41,6 +41,9 @@ class WeatherRepositoryImpl(
             // Cache it in Room (triggers updates on active database observers)
             saveWeather(freshWeather)
 
+            // Save location as default on success
+            saveDefaultLocation(latitude, longitude)
+
             // Emit the fresh weather data
             emit(Result.success(freshWeather))
         } catch (e: Exception) {
@@ -83,6 +86,25 @@ class WeatherRepositoryImpl(
                 weatherEntity.toDomain(forecastList)
             }
         }
+    }
+
+    override fun getDefaultLocation(): Pair<Double, Double>? {
+        val sharedPrefs = context.getSharedPreferences("weather_prefs", Context.MODE_PRIVATE)
+        if (sharedPrefs.getBoolean("has_default_location", false)) {
+            val lat = sharedPrefs.getFloat("default_latitude", 51.5074f).toDouble()
+            val lon = sharedPrefs.getFloat("default_longitude", -0.1278f).toDouble()
+            return Pair(lat, lon)
+        }
+        return null
+    }
+
+    private fun saveDefaultLocation(latitude: Double, longitude: Double) {
+        val sharedPrefs = context.getSharedPreferences("weather_prefs", Context.MODE_PRIVATE)
+        sharedPrefs.edit()
+            .putFloat("default_latitude", latitude.toFloat())
+            .putFloat("default_longitude", longitude.toFloat())
+            .putBoolean("has_default_location", true)
+            .apply()
     }
 
     private fun getCachedWeather(coordinateKey: String): Flow<WeatherInfo?> {
