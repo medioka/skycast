@@ -61,6 +61,44 @@ import com.medioka.skycast.ui.theme.Secondary
 import com.medioka.skycast.ui.theme.Tertiary
 import org.koin.androidx.compose.koinViewModel
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.LocationManager
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.core.content.ContextCompat
+import com.medioka.skycast.ui.common.LocationPermissionDeniedView
+import com.medioka.skycast.ui.common.LocationDisabledView
+
+private fun isLocationPermissionGranted(context: Context): Boolean {
+    val fineGranted = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+    val coarseGranted = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+    return fineGranted || coarseGranted
+}
+
+private fun isLocationServicesEnabled(context: Context): Boolean {
+    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+           locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -70,6 +108,37 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    var hasPermission by remember { mutableStateOf(isLocationPermissionGranted(context)) }
+    var isGpsEnabled by remember { mutableStateOf(isLocationServicesEnabled(context)) }
+    var bypassLocationError by remember { mutableStateOf(false) }
+
+    val hasSavedLocation = remember { viewModel.hasSavedLocation() }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasPermission = isLocationPermissionGranted(context)
+                isGpsEnabled = isLocationServicesEnabled(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+        hasPermission = fineGranted || coarseGranted
+        isGpsEnabled = isLocationServicesEnabled(context)
+    }
 
     // Trigger load of default coordinates (last successfully chosen, or London) on launch
     LaunchedEffect(Unit) {
@@ -125,46 +194,76 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                PullToRefreshBox(
-                    isRefreshing = isRefreshing,
-                    onRefresh = {
-                        val state = uiState
-                        if (state is HomeUiState.Success) {
-                            viewModel.fetchWeather(
-                                state.weatherInfo.coordinate.latitude,
-                                state.weatherInfo.coordinate.longitude
+                if (!hasPermission && !bypassLocationError) {
+                    LocationPermissionDeniedView(
+                        onRequestPermission = {
+                            permissionLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                                )
                             )
-                        } else {
-                            viewModel.fetchWeather(51.5074, -0.1278)
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    when (val state = uiState) {
-                        is HomeUiState.Loading -> {
-                            DashboardSkeleton()
-                        }
-                        is HomeUiState.Success -> {
-                            DashboardContent(
-                                weatherInfo = state.weatherInfo,
-                                isOffline = state.isOffline,
-                                onRefresh = {
-                                    viewModel.fetchWeather(
-                                        state.weatherInfo.coordinate.latitude,
-                                        state.weatherInfo.coordinate.longitude
-                                    )
-                                },
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                        is HomeUiState.Error -> {
-                            DashboardErrorView(
-                                message = state.message,
-                                onRetry = {
-                                    viewModel.fetchWeather(51.5074, -0.1278)
-                                },
-                                modifier = Modifier.fillMaxSize()
-                            )
+                        },
+                        onUseSavedLocation = if (hasSavedLocation) {
+                            { bypassLocationError = true }
+                        } else null,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else if (!isGpsEnabled && !bypassLocationError) {
+                    LocationDisabledView(
+                        onEnableLocation = {
+                            val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                            context.startActivity(intent)
+                        },
+                        onUseSavedLocation = if (hasSavedLocation) {
+                            { bypassLocationError = true }
+                        } else null,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = {
+                            val state = uiState
+                            if (state is HomeUiState.Success) {
+                                viewModel.fetchWeather(
+                                    state.weatherInfo.coordinate.latitude,
+                                    state.weatherInfo.coordinate.longitude
+                                )
+                            } else {
+                                val coords = viewModel.getDefaultCoordinates()
+                                viewModel.fetchWeather(coords.first, coords.second)
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        when (val state = uiState) {
+                            is HomeUiState.Loading -> {
+                                DashboardSkeleton()
+                            }
+                            is HomeUiState.Success -> {
+                                DashboardContent(
+                                    weatherInfo = state.weatherInfo,
+                                    isOffline = state.isOffline,
+                                    onRefresh = {
+                                        viewModel.fetchWeather(
+                                            state.weatherInfo.coordinate.latitude,
+                                            state.weatherInfo.coordinate.longitude
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            is HomeUiState.Error -> {
+                                DashboardErrorView(
+                                    message = state.message,
+                                    onRetry = {
+                                        val coords = viewModel.getDefaultCoordinates()
+                                        viewModel.fetchWeather(coords.first, coords.second)
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
                     }
                 }

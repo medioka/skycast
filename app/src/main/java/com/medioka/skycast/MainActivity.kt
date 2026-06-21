@@ -38,6 +38,41 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+<<<<<<< HEAD
+=======
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val fineGranted = androidx.core.content.ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val coarseGranted = androidx.core.content.ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (fineGranted || coarseGranted) {
+            fetchUserLocation()
+        }
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        val targetScreen = intent?.getStringExtra("target_screen") ?: intent?.getStringExtra("screen")
+        if (targetScreen != null) {
+            pendingRoute.value = if (targetScreen.equals("home", ignoreCase = true) || targetScreen.equals("weather", ignoreCase = true)) {
+                "home"
+            } else {
+                "map"
+            }
+        }
+    }
+
+>>>>>>> d032623 (feat: Implement LocationPermissionDeniedView and LocationDisabledView for robust location error handling on HomeScreen)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

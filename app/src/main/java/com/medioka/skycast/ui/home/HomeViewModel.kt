@@ -19,6 +19,10 @@ class HomeViewModel(
         return weatherRepository.getDefaultLocation() ?: Pair(51.5074, -0.1278)
     }
 
+    fun hasSavedLocation(): Boolean {
+        return weatherRepository.getDefaultLocation() != null
+    }
+
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
