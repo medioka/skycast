@@ -6,13 +6,13 @@ plugins {
 }
 
 android {
-    namespace = "com.medioka.weatherapp"
-    compileSdk = 36
+    namespace = "com.medioka.skycast"
+    compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.medioka.weatherapp"
+        applicationId = "com.medioka.skycast"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0"
 
