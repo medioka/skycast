@@ -339,6 +339,7 @@ fun DashboardErrorView(
 fun LocationPermissionDeniedView(
     onRequestPermission: () -> Unit,
     onUseSavedLocation: (() -> Unit)?,
+    bypassLabel: String = "USE SAVED LOCATION",
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -411,7 +412,7 @@ fun LocationPermissionDeniedView(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "USE SAVED LOCATION",
+                            text = bypassLabel,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                             letterSpacing = 1.sp
                         )
@@ -426,6 +427,7 @@ fun LocationPermissionDeniedView(
 fun LocationDisabledView(
     onEnableLocation: () -> Unit,
     onUseSavedLocation: (() -> Unit)?,
+    bypassLabel: String = "USE SAVED LOCATION",
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -498,7 +500,7 @@ fun LocationDisabledView(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "USE SAVED LOCATION",
+                            text = bypassLabel,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                             letterSpacing = 1.sp
                         )

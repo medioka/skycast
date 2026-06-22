@@ -58,6 +58,35 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 
+import android.content.Intent
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.medioka.skycast.ui.common.LocationPermissionDeniedView
+import com.medioka.skycast.ui.common.LocationDisabledView
+
+private fun isLocationPermissionGranted(context: Context): Boolean {
+    val fineGranted = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+    val coarseGranted = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    ) == PackageManager.PERMISSION_GRANTED
+    return fineGranted || coarseGranted
+}
+
+private fun isLocationServicesEnabled(context: Context): Boolean {
+    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+           locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+}
+
 @Composable
 fun MapScreen(
     onLocationSelected: (Double, Double) -> Unit,
@@ -68,6 +97,34 @@ fun MapScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var mapViewRef by remember { mutableStateOf<MapView?>(null) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    var hasPermission by remember { mutableStateOf(isLocationPermissionGranted(context)) }
+    var isGpsEnabled by remember { mutableStateOf(isLocationServicesEnabled(context)) }
+    var bypassLocationError by remember { mutableStateOf(false) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasPermission = isLocationPermissionGranted(context)
+                isGpsEnabled = isLocationServicesEnabled(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+        hasPermission = fineGranted || coarseGranted
+        isGpsEnabled = isLocationServicesEnabled(context)
+    }
 
     val refocusToUserLocation = {
         val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -151,62 +208,215 @@ fun MapScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        // 1. AndroidView wrapping OSM MapView
-        AndroidView(
-            factory = { ctx ->
-                MapView(ctx).apply {
-                    setTileSource(TileSourceFactory.MAPNIK)
-                    setMultiTouchControls(true)
-                    controller.setZoom(12.0)
-                    val startPoint = GeoPoint(uiState.latitude, uiState.longitude)
-                    controller.setCenter(startPoint)
-                    mapViewRef = this
+        if (!hasPermission && !bypassLocationError) {
+            LocationPermissionDeniedView(
+                onRequestPermission = {
+                    permissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                },
+                onUseSavedLocation = { bypassLocationError = true },
+                bypassLabel = "MANUALLY BROWSE MAP",
+                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.9f))
+            )
+        } else if (!isGpsEnabled && !bypassLocationError) {
+            LocationDisabledView(
+                onEnableLocation = {
+                    val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                    context.startActivity(intent)
+                },
+                onUseSavedLocation = { bypassLocationError = true },
+                bypassLabel = "MANUALLY BROWSE MAP",
+                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.9f))
+            )
+        } else {
+            // 1. AndroidView wrapping OSM MapView
+            AndroidView(
+                factory = { ctx ->
+                    MapView(ctx).apply {
+                        setTileSource(TileSourceFactory.MAPNIK)
+                        setMultiTouchControls(true)
+                        controller.setZoom(12.0)
+                        val startPoint = GeoPoint(uiState.latitude, uiState.longitude)
+                        controller.setCenter(startPoint)
+                        mapViewRef = this
 
-                    // Track scroll zoom stops to update center coordinates in viewmodel
-                    addMapListener(object : org.osmdroid.events.MapListener {
-                        override fun onScroll(event: org.osmdroid.events.ScrollEvent?): Boolean {
-                            val center = mapCenter
-                            viewModel.updateLocation(center.latitude, center.longitude)
-                            return true
-                        }
+                        // Track scroll zoom stops to update center coordinates in viewmodel
+                        addMapListener(object : org.osmdroid.events.MapListener {
+                            override fun onScroll(event: org.osmdroid.events.ScrollEvent?): Boolean {
+                                val center = mapCenter
+                                viewModel.updateLocation(center.latitude, center.longitude)
+                                return true
+                            }
 
-                        override fun onZoom(event: org.osmdroid.events.ZoomEvent?): Boolean {
-                            val center = mapCenter
-                            viewModel.updateLocation(center.latitude, center.longitude)
-                            return true
-                        }
-                    })
-                }
-            },
-            modifier = Modifier.fillMaxSize()
-        )
+                            override fun onZoom(event: org.osmdroid.events.ZoomEvent?): Boolean {
+                                val center = mapCenter
+                                viewModel.updateLocation(center.latitude, center.longitude)
+                                return true
+                            }
+                        })
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
 
-        // 2. Center Locator Pin (Hovering over the map)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 24.dp), // offset for visual pin balance
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.size(64.dp)
+            // 2. Center Locator Pin (Hovering over the map)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 24.dp), // offset for visual pin balance
+                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.LocationOn,
-                    contentDescription = "Target Selector Pin",
-                    tint = PrimaryContainer,
-                    modifier = Modifier.size(44.dp)
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.size(64.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Target Selector Pin",
+                        tint = PrimaryContainer,
+                        modifier = Modifier.size(44.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp, 6.dp)
+                            .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(50))
+                    )
+                }
+            }
+
+            // 3.5. GPS Refocus Button
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 280.dp, end = 24.dp)
+            ) {
                 Box(
                     modifier = Modifier
-                        .size(6.dp, 6.dp)
-                        .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(50))
-                )
+                        .size(48.dp)
+                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(50)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    IconButton(onClick = { refocusToUserLocation() }) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = "Refocus to GPS",
+                            tint = Primary
+                        )
+                    }
+                }
+            }
+
+            // 4. Location Details Bottom Card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 32.dp, start = 24.dp, end = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Black.copy(alpha = 0.8f), RoundedCornerShape(32.dp))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(32.dp))
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    // Drag Handle Indicator
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp, 4.dp)
+                            .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(50))
+                            .align(Alignment.CenterHorizontally)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = uiState.cityName,
+                                style = HeadlineLgTextStyle,
+                                color = Color.White
+                            )
+                            val latStr = "%.4f".format(uiState.latitude)
+                            val lonStr = "%.4f".format(uiState.longitude)
+                            Text(
+                                text = "$latStr° N, $lonStr° W",
+                                style = LabelSmTextStyle,
+                                color = Color.White.copy(alpha = 0.6f)
+                            )
+                        }
+
+                        // Selected Temperature Circle
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                                .clickable(enabled = !uiState.isSearching) {
+                                    viewModel.fetchWeatherForCurrentLocation()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (uiState.isSearching) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = Primary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                if (uiState.temperature == "?") {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = "Fetch Temperature",
+                                        tint = Primary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                } else {
+                                    Text(
+                                        text = uiState.temperature,
+                                        color = Primary,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // select location button
+                    Button(
+                        onClick = {
+                            onLocationSelected(uiState.latitude, uiState.longitude)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PrimaryContainer,
+                            contentColor = Color.Black
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                    ) {
+                        Text(
+                            text = "SELECT LOCATION",
+                            fontWeight = FontWeight.Bold,
+                            style = LabelSmTextStyle,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                }
             }
         }
 
-        // 3. Floating Back Button (Top Layer)
+        // 3. Floating Back Button (Top Layer, drawn over map and error views)
         Box(
             modifier = Modifier
                 .padding(top = 48.dp, start = 24.dp)
@@ -224,133 +434,6 @@ fun MapScreen(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back Button",
                         tint = Primary
-                    )
-                }
-            }
-        }
-
-        // 3.5. GPS Refocus Button
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(bottom = 280.dp, end = 24.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(50))
-                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(50)),
-                contentAlignment = Alignment.Center
-            ) {
-                IconButton(onClick = { refocusToUserLocation() }) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = "Refocus to GPS",
-                        tint = Primary
-                    )
-                }
-            }
-        }
-
-        // 4. Location Details Bottom Card
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp, start = 24.dp, end = 24.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.Black.copy(alpha = 0.8f), RoundedCornerShape(32.dp))
-                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(32.dp))
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                // Drag Handle Indicator
-                Box(
-                    modifier = Modifier
-                        .size(40.dp, 4.dp)
-                        .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(50))
-                        .align(Alignment.CenterHorizontally)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = uiState.cityName,
-                            style = HeadlineLgTextStyle,
-                            color = Color.White
-                        )
-                        val latStr = "%.4f".format(uiState.latitude)
-                        val lonStr = "%.4f".format(uiState.longitude)
-                        Text(
-                            text = "$latStr° N, $lonStr° W",
-                            style = LabelSmTextStyle,
-                            color = Color.White.copy(alpha = 0.6f)
-                        )
-                    }
-
-                    // Selected Temperature Circle
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
-                            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
-                            .clickable(enabled = !uiState.isSearching) {
-                                viewModel.fetchWeatherForCurrentLocation()
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (uiState.isSearching) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = Primary,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            if (uiState.temperature == "?") {
-                                Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = "Fetch Temperature",
-                                    tint = Primary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            } else {
-                                Text(
-                                    text = uiState.temperature,
-                                    color = Primary,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // select location button
-                Button(
-                    onClick = {
-                        onLocationSelected(uiState.latitude, uiState.longitude)
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryContainer,
-                        contentColor = Color.Black
-                    ),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                ) {
-                    Text(
-                        text = "SELECT LOCATION",
-                        fontWeight = FontWeight.Bold,
-                        style = LabelSmTextStyle,
-                        letterSpacing = 1.sp
                     )
                 }
             }
