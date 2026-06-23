@@ -77,12 +77,19 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+<<<<<<< HEAD
         // Trigger location permissions on start
         requestPermissionLauncher.launch(
             arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION
             )
+=======
+        
+        val permissions = mutableListOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+>>>>>>> 450c399 (refactor: Remove all code comments from Kotlin source files)
         )
 
         setContent {
@@ -95,7 +102,7 @@ class MainActivity : ComponentActivity() {
                         startDestination = "home"
                     ) {
                         composable("home") {
-                            // Check if map screen returned any location coordinates
+                            
                             val backStackEntry = navController.currentBackStackEntryAsState().value
                             val selectedLocation = backStackEntry?.savedStateHandle
                                 ?.get<DoubleArray>("selected_location")
@@ -106,7 +113,7 @@ class MainActivity : ComponentActivity() {
                                         latitude = selectedLocation[0],
                                         longitude = selectedLocation[1]
                                     )
-                                    // Clear selection parameter to prevent re-fetch on rotation/recomposition
+                                    
                                     backStackEntry.savedStateHandle.remove<DoubleArray>("selected_location")
                                 }
                             }
@@ -122,7 +129,7 @@ class MainActivity : ComponentActivity() {
                         composable("map") {
                             MapScreen(
                                 onLocationSelected = { lat, lon ->
-                                    // Save selection and pop back to home
+                                    
                                     navController.previousBackStackEntry?.savedStateHandle
                                         ?.set("selected_location", doubleArrayOf(lat, lon))
                                     navController.popBackStack()
@@ -151,13 +158,13 @@ class MainActivity : ComponentActivity() {
             }
 
             if (provider != null) {
-                // Instantly query last known coordinates to load cached state
+                
                 val lastKnown = locationManager.getLastKnownLocation(provider)
                 if (lastKnown != null) {
                     homeViewModel.fetchWeather(lastKnown.latitude, lastKnown.longitude)
                 }
 
-                // Request location callback update
+                
                 locationManager.requestLocationUpdates(
                     provider,
                     5000L,
@@ -173,7 +180,7 @@ class MainActivity : ComponentActivity() {
                 )
             }
         } catch (e: SecurityException) {
-            // Permission denied or revoked at runtime
+            
         }
     }
 }

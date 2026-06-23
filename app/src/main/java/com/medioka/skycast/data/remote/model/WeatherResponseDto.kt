@@ -21,7 +21,7 @@ data class WeatherResponseDto(
         val currentCode = currentWeather.weatherCode
         val forecastList = mutableListOf<Forecast>()
 
-        // Open-Meteo returns lists of forecasts for the days. Let's map them.
+        
         val times = daily.time
         val maxTemps = daily.temperatureMax
         val minTemps = daily.temperatureMin
@@ -56,7 +56,7 @@ data class WeatherResponseDto(
             temperature = currentWeather.temperature,
             condition = parseWeatherCode(currentCode),
             conditionCode = currentCode,
-            feelsLike = currentWeather.temperature, // Open-Meteo current_weather doesn't return feels_like directly, using temp
+            feelsLike = currentWeather.temperature, 
             minTemp = todayMin,
             maxTemp = todayMax,
             forecast = forecastList,
@@ -104,7 +104,7 @@ private fun getDayNameFromDateString(dateStr: String): String {
     return try {
         val parser = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val date = parser.parse(dateStr) ?: return dateStr
-        val formatter = SimpleDateFormat("EEE", Locale.getDefault()) // E.g., "Wed"
+        val formatter = SimpleDateFormat("EEE", Locale.getDefault()) 
         formatter.format(date)
     } catch (e: Exception) {
         dateStr

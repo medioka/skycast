@@ -171,12 +171,12 @@ fun MapScreen(
                     }
                 }
             } catch (e: SecurityException) {
-                // Ignore security exceptions
+                
             }
         }
     }
 
-    // Setup OSMDroid user agent configuration and center map on current GPS location if available
+    
     LaunchedEffect(Unit) {
         Configuration.getInstance().userAgentValue = context.packageName
         
@@ -202,7 +202,7 @@ fun MapScreen(
                     }
                 }
             } catch (e: SecurityException) {
-                // Ignore security exceptions
+                
             }
         }
     }
@@ -233,7 +233,7 @@ fun MapScreen(
                 modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.9f))
             )
         } else {
-            // 1. AndroidView wrapping OSM MapView
+            
             AndroidView(
                 factory = { ctx ->
                     MapView(ctx).apply {
@@ -244,7 +244,7 @@ fun MapScreen(
                         controller.setCenter(startPoint)
                         mapViewRef = this
 
-                        // Track scroll zoom stops to update center coordinates in viewmodel
+                        
                         addMapListener(object : org.osmdroid.events.MapListener {
                             override fun onScroll(event: org.osmdroid.events.ScrollEvent?): Boolean {
                                 val center = mapCenter
@@ -263,11 +263,11 @@ fun MapScreen(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // 2. Center Locator Pin (Hovering over the map)
+            
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 24.dp), // offset for visual pin balance
+                    .padding(bottom = 24.dp), 
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -288,7 +288,7 @@ fun MapScreen(
                 }
             }
 
-            // 3.5. GPS Refocus Button
+            
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -311,7 +311,7 @@ fun MapScreen(
                 }
             }
 
-            // 4. Location Details Bottom Card
+            
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -326,7 +326,7 @@ fun MapScreen(
                         .padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    // Drag Handle Indicator
+                    
                     Box(
                         modifier = Modifier
                             .size(40.dp, 4.dp)
@@ -354,7 +354,7 @@ fun MapScreen(
                             )
                         }
 
-                        // Selected Temperature Circle
+                        
                         Box(
                             modifier = Modifier
                                 .size(56.dp)
@@ -391,7 +391,7 @@ fun MapScreen(
                         }
                     }
 
-                    // select location button
+                    
                     Button(
                         onClick = {
                             onLocationSelected(uiState.latitude, uiState.longitude)
@@ -416,12 +416,12 @@ fun MapScreen(
             }
         }
 
-        // 3. Floating Back Button (Top Layer, drawn over map and error views)
+        
         Box(
             modifier = Modifier
                 .padding(top = 48.dp, start = 24.dp)
         ) {
-            // Glass Back Button
+            
             Box(
                 modifier = Modifier
                     .size(48.dp)

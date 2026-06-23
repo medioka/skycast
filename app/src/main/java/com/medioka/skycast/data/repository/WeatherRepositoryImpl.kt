@@ -26,28 +26,28 @@ class WeatherRepositoryImpl(
     override fun getWeather(latitude: Double, longitude: Double): Flow<Result<WeatherInfo>> = flow {
         val key = "$latitude,$longitude"
 
-        // 1. Try to load and emit cached data immediately for offline-first support
+        
         val cachedWeather = getCachedWeather(key).firstOrNull()
         if (cachedWeather != null) {
             emit(Result.success(cachedWeather))
         }
 
-        // 2. Perform network refresh
+        
         try {
             val response = apiService.getWeatherForecast(latitude, longitude)
             val cityName = getCityName(latitude, longitude)
             val freshWeather = response.toDomain(cityName)
 
-            // Cache it in Room (triggers updates on active database observers)
+            
             saveWeather(freshWeather)
 
-            // Save location as default on success
+            
             saveDefaultLocation(latitude, longitude)
 
-            // Emit the fresh weather data
+            
             emit(Result.success(freshWeather))
         } catch (e: Exception) {
-            // If network fails but we have cached data, we can emit failure but the cache is already emitted.
+            
             emit(Result.failure(e))
         }
     }
@@ -78,10 +78,10 @@ class WeatherRepositoryImpl(
     }
 
     override fun getSavedWeather(): Flow<List<WeatherInfo>> {
-        // Query all weather cache and map to domain entities, including their forecasts
+        
         return weatherDao.getAllSavedWeather().map { list ->
             list.map { weatherEntity ->
-                // Collect the corresponding forecast for each saved location
+                
                 val forecastList = weatherDao.getForecastCache(weatherEntity.coordinateKey).firstOrNull() ?: emptyList()
                 weatherEntity.toDomain(forecastList)
             }

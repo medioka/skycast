@@ -140,7 +140,7 @@ fun HomeScreen(
         isGpsEnabled = isLocationServicesEnabled(context)
     }
 
-    // Trigger load of default coordinates (last successfully chosen, or London) on launch
+    
     LaunchedEffect(Unit) {
         val coords = viewModel.getDefaultCoordinates()
         viewModel.fetchWeather(coords.first, coords.second)
@@ -291,7 +291,7 @@ private fun DashboardContent(
     ) {
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Offline Fallback Alert Banner
+        
         if (isOffline) {
             Box(
                 modifier = Modifier
@@ -310,7 +310,7 @@ private fun DashboardContent(
             }
         }
 
-        // Featured Main Weather Card
+        
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -370,7 +370,7 @@ private fun DashboardContent(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    // Weather Illustration Canvas Widget
+                    
                     WeatherIllustration(
                         conditionCode = weatherInfo.conditionCode,
                         modifier = Modifier.size(110.dp)
@@ -396,7 +396,7 @@ private fun DashboardContent(
             }
         }
 
-        // Bento Stats Grid Add-on
+        
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             maxItemsInEachRow = 2,
@@ -458,7 +458,7 @@ private fun DashboardContent(
             }
         }
 
-        // 5-Day Forecast Header
+        
         Text(
             text = "5-Day Forecast",
             fontSize = 20.sp,
@@ -467,7 +467,7 @@ private fun DashboardContent(
             modifier = Modifier.padding(top = 8.dp)
         )
 
-        // Forecast Horizontal LazyRow Scroll Container
+        
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)

@@ -44,7 +44,7 @@ import com.medioka.skycast.ui.theme.PrimaryContainer
 import com.medioka.skycast.ui.theme.Tertiary
 import com.medioka.skycast.ui.theme.TertiaryContainer
 
-// 1. Shimmer Animation Modifier
+
 fun Modifier.shimmer(): Modifier = composed {
     val transition = rememberInfiniteTransition(label = "shimmer")
     val translateAnim = transition.animateFloat(
@@ -72,7 +72,7 @@ fun Modifier.shimmer(): Modifier = composed {
     background(brush = brush)
 }
 
-// 2. Custom Canvas Weather Illustrations (Sun, Clouds, Rain, Thunderstorms)
+
 @Composable
 fun WeatherIllustration(
     conditionCode: Int,
@@ -84,17 +84,17 @@ fun WeatherIllustration(
         val center = Offset(width / 2f, height / 2f)
 
         when (conditionCode) {
-            0 -> drawSun(center, width * 0.35f) // Clear Sky
-            1, 2, 3 -> { // Partly Cloudy / Overcast
+            0 -> drawSun(center, width * 0.35f) 
+            1, 2, 3 -> { 
                 drawSun(center - Offset(width * 0.15f, height * 0.15f), width * 0.25f)
                 drawCloud(center + Offset(width * 0.05f, height * 0.08f), width * 0.5f)
             }
-            45, 48 -> drawFog(center, width * 0.5f) // Foggy
-            51, 53, 55, 61, 63, 65, 80, 81, 82 -> { // Rainy / Drizzle
+            45, 48 -> drawFog(center, width * 0.5f) 
+            51, 53, 55, 61, 63, 65, 80, 81, 82 -> { 
                 drawCloud(center - Offset(0f, height * 0.1f), width * 0.45f)
                 drawRaindrops(center + Offset(0f, height * 0.2f), width * 0.4f)
             }
-            95, 96, 99 -> { // Thunderstorm
+            95, 96, 99 -> { 
                 drawCloud(center - Offset(0f, height * 0.1f), width * 0.45f)
                 drawLightning(center + Offset(0f, height * 0.18f), width * 0.25f)
             }
@@ -124,7 +124,7 @@ private fun DrawScope.drawCloud(center: Offset, width: Float) {
     val cloudColor = Color.White.copy(alpha = 0.85f)
     val shadowColor = Primary.copy(alpha = 0.2f)
 
-    // Shadow glow
+    
     drawRoundRect(
         color = shadowColor,
         topLeft = center - Offset(width / 2f, width * 0.25f),
@@ -132,14 +132,14 @@ private fun DrawScope.drawCloud(center: Offset, width: Float) {
         cornerRadius = androidx.compose.ui.geometry.CornerRadius(width * 0.25f, width * 0.25f)
     )
 
-    // Main cloud body
+    
     drawRoundRect(
         color = cloudColor,
         topLeft = center - Offset(width / 2.2f, width * 0.2f),
         size = Size(width * 0.9f, width * 0.4f),
         cornerRadius = androidx.compose.ui.geometry.CornerRadius(width * 0.2f, width * 0.2f)
     )
-    // Cloud dome
+    
     drawCircle(
         color = cloudColor,
         center = center - Offset(width * 0.1f, width * 0.12f),
@@ -188,7 +188,7 @@ private fun DrawScope.drawLightning(center: Offset, height: Float) {
     drawPath(path = path, color = lightningColor)
 }
 
-// 3. Skeleton Loading Screen Composable
+
 @Composable
 fun DashboardSkeleton(
     modifier: Modifier = Modifier
@@ -199,10 +199,10 @@ fun DashboardSkeleton(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(32.dp)
     ) {
-        // Top Space
+        
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Large Card Skeleton
+        
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -212,7 +212,7 @@ fun DashboardSkeleton(
                 .shimmer()
         )
 
-        // Bento Stats Grid Skeleton
+        
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -229,7 +229,7 @@ fun DashboardSkeleton(
             }
         }
 
-        // Forecast Header Skeleton
+        
         Box(
             modifier = Modifier
                 .width(150.dp)
@@ -238,7 +238,7 @@ fun DashboardSkeleton(
                 .shimmer()
         )
 
-        // Forecast Cards List Skeleton
+        
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -257,7 +257,7 @@ fun DashboardSkeleton(
     }
 }
 
-// 4. Custom Error Overlay with Recovery Support
+
 @Composable
 fun DashboardErrorView(
     message: String,

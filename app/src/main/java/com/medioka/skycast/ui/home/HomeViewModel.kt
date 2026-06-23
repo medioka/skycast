@@ -40,7 +40,7 @@ class HomeViewModel(
                 _isRefreshing.value = false
                 result.fold(
                     onSuccess = { weatherInfo ->
-                        // Cache fetch will emit first, followed by network success
+                        
                         _uiState.value = HomeUiState.Success(
                             weatherInfo = weatherInfo,
                             isOffline = false
@@ -49,7 +49,7 @@ class HomeViewModel(
                     onFailure = { error ->
                         val current = _uiState.value
                         if (current is HomeUiState.Success) {
-                            // Keep displaying the cache but notify it is offline
+                            
                             _uiState.value = HomeUiState.Success(
                                 weatherInfo = current.weatherInfo,
                                 isOffline = true

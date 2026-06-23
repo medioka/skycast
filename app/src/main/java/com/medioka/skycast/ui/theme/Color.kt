@@ -2,9 +2,9 @@ package com.medioka.skycast.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Stitch Core Named Colors
+
 val Primary = Color(0xFF70FFE5)
-val PrimaryContainer = Color(0xFF00E5C9) // Neon Teal Accent
+val PrimaryContainer = Color(0xFF00E5C9) 
 val OnPrimary = Color(0xFF00372F)
 val OnPrimaryContainer = Color(0xFF006155)
 
@@ -16,7 +16,7 @@ val Tertiary = Color(0xFFFFE5BC)
 val TertiaryContainer = Color(0xFFFFC24C)
 val OnTertiary = Color(0xFF422D00)
 
-val Background = Color(0xFF0D1513) // Dark Greenish Slate
+val Background = Color(0xFF0D1513) 
 val Surface = Color(0xFF0D1513)
 val SurfaceContainer = Color(0xFF19211F)
 val SurfaceContainerHigh = Color(0xFF242C29)
@@ -34,6 +34,6 @@ val Error = Color(0xFFFFB4AB)
 val ErrorContainer = Color(0xFF93000A)
 val OnError = Color(0xFF690005)
 
-// Stitch Background Canvas Shader Gradient Colors
-val GradientStart = Color(0xFF0D1636) // Deep Midnight Blue
-val GradientEnd = Color(0xFF2C0C4D)   // Deep Purple
+
+val GradientStart = Color(0xFF0D1636) 
+val GradientEnd = Color(0xFF2C0C4D)   

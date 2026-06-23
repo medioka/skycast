@@ -8,7 +8,7 @@ import com.medioka.skycast.domain.model.Forecast
 data class ForecastCacheEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val coordinateKey: String, // format: "lat,lon" to associate with weather_cache
+    val coordinateKey: String, 
     val dayName: String,
     val temperature: Double,
     val condition: String,

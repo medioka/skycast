@@ -8,7 +8,7 @@ import com.medioka.skycast.domain.model.WeatherInfo
 @Entity(tableName = "weather_cache")
 data class WeatherCacheEntity(
     @PrimaryKey
-    val coordinateKey: String, // format: "lat,lon"
+    val coordinateKey: String, 
     val latitude: Double,
     val longitude: Double,
     val cityName: String,

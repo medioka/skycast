@@ -6,7 +6,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Stitch Typography Styling
+
 val HeroTempTextStyle = TextStyle(
     fontFamily = FontFamily.SansSerif,
     fontWeight = FontWeight.Bold,
@@ -44,7 +44,7 @@ val LabelSmTextStyle = TextStyle(
     letterSpacing = 0.05.sp
 )
 
-// Set of Material 3 typography styles to start with
+
 val Typography = Typography(
     headlineLarge = HeadlineLgTextStyle,
     bodyMedium = BodyMdTextStyle,
