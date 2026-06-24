@@ -26,7 +26,7 @@ import com.medioka.skycast.ui.home.HomeScreen
 import com.medioka.skycast.ui.home.HomeViewModel
 import com.medioka.skycast.ui.map.MapScreen
 import com.medioka.skycast.ui.compass.CompassScreen
-import com.medioka.skycast.ui.theme.WeatherAppTheme
+import com.medioka.skycast.ui.theme.SkycastTheme
 import org.koin.android.ext.android.inject
 
 class MainActivity : ComponentActivity() {
@@ -74,7 +74,7 @@ class MainActivity : ComponentActivity() {
         requestPermissionLauncher.launch(permissions.toTypedArray())
 
         setContent {
-            WeatherAppTheme {
+            SkycastTheme {
                 val navController = rememberNavController()
 
 

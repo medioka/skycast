@@ -34,7 +34,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
-fun WeatherAppTheme(
+fun SkycastTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = DarkColorScheme
