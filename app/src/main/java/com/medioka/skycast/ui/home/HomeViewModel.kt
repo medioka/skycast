@@ -6,6 +6,7 @@ import com.medioka.skycast.domain.usecase.GetWeatherUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 import com.medioka.skycast.domain.repository.WeatherRepository
@@ -49,16 +50,33 @@ class HomeViewModel(
                     onFailure = { error ->
                         val current = _uiState.value
                         if (current is HomeUiState.Success) {
-                            
                             _uiState.value = HomeUiState.Success(
                                 weatherInfo = current.weatherInfo,
                                 isOffline = true
                             )
                         } else {
-                            _uiState.value = HomeUiState.Error(
-                                message = error.localizedMessage ?: "Network connection failed",
-                                cachedWeather = null
-                            )
+                            viewModelScope.launch {
+                                try {
+                                    val savedList = weatherRepository.getSavedWeather().firstOrNull()
+                                    val cached = savedList?.firstOrNull()
+                                    if (cached != null) {
+                                        _uiState.value = HomeUiState.Success(
+                                            weatherInfo = cached,
+                                            isOffline = true
+                                        )
+                                    } else {
+                                        _uiState.value = HomeUiState.Error(
+                                            message = error.localizedMessage ?: "Network connection failed",
+                                            cachedWeather = null
+                                        )
+                                    }
+                                } catch (e: Exception) {
+                                    _uiState.value = HomeUiState.Error(
+                                        message = error.localizedMessage ?: "Network connection failed",
+                                        cachedWeather = null
+                                    )
+                                }
+                            }
                         }
                     }
                 )

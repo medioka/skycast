@@ -6,22 +6,43 @@ A modern, offline-first Android Weather Application built with **Jetpack Compose
 
 ## 1. App Showcase & Features
 
-- **Current Location Weather**: Detects user GPS coordinates reactively on startup and fetches local weather statistics.
-- **Offline-First Cache**: Integrates a Room database cache. If network connectivity fails, the app displays the last cached weather data accompanied by an error recovery banner.
-- **Location Selection via Map**: A Floating Action Button (FAB) redirects users to an interactive OpenStreetMap view to pin location coordinates.
-- **Robust Location Error Recovery**: Includes premium glassmorphic overlays (`LocationPermissionDeniedView` and `LocationDisabledView`) to prompt users to grant GPS permissions or enable location settings. Includes a bypass option to manually browse the map or use the last saved location.
-- **Compass Sensor Integration**: Showcases the device's hardware sensors by displaying heading angles smoothly using `Sensor.TYPE_ROTATION_VECTOR` sensor fusion.
+The application showcases integration of core Android APIs and architecture patterns through its main usage components:
+
+1. **GPS & OpenStreetMap**:
+   - Detects live user coordinates reactively on startup using the device's GPS provider via `LocationManager`.
+   - Embeds an interactive offline-compatible OpenStreetMap view (`OSMDroid`) to let users pin custom coordinate locations.
+   - Leverages Android `Geocoder` for background reverse-geocoding of city/location names.
+2. **Room Database (Offline-First Cache)**:
+   - Integrates a local SQLite cache built on Room database.
+   - Caches coordinate-keyed weather data and 7-day forecasts.
+   - Automatically fallbacks to offline mode and loads the latest cached weather on next boot or network dropouts.
+3. **Retrofit REST API Client**:
+   - Executes standard REST weather and forecast endpoints.
+   - Parses network responses asynchronously using Kotlinx Serialization.
+4. **Compass Hardware Sensor Integration**:
+   - Accesses hardware sensors using the Android `SensorManager` API with `Sensor.TYPE_ROTATION_VECTOR`.
+   - Smoothly processes telemetry azimuth angles to render a fully animated custom Canvas 3D compass rose.
+
+### Visual Showcases
+
+| Home Screen | Compass Sensor Screen | Map Screen |
+| :---: | :---: | :---: |
+| ![Home Screen](screenshots/home_screen.png) | ![Compass Screen](screenshots/compass_screen.png) | ![Map Screen](screenshots/map_screen.png) |
+
+| Location Disabled (Home) | Location Disabled (Map) |
+| :---: | :---: |
+| ![Location Disabled Home](screenshots/location_disabled_home.png) | ![Location Disabled Map](screenshots/location_disabled_map.png) |
 
 ---
 
 ## 2. Technical Stack
 - **UI Framework**: Jetpack Compose (Material Design 3)
 - **Asynchronous Flow**: Kotlin Coroutines & Flow
-- **Local Cache**: Room Database (SQLite)
+- **Local Cache**: Room Database (SQLite) (see [Database Schema](DATABASE.md))
 - **Networking**: Retrofit & OkHttp with Kotlinx Serialization
 - **Map Library**: OSMDroid wrapped in AndroidView Compose
 - **Dependency Injection**: Koin
-- **Hardware Integration**: Android SensorManager API (Rotation Vector Sensor)
+- **Hardware Integration**: Android SensorManager API (Rotation Vector Sensor) (see [Sensor Documentation](SENSORS.md))
 
 ---
 
