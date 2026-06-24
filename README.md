@@ -29,9 +29,9 @@ The application showcases integration of core Android APIs and architecture patt
 | :---: | :---: | :---: |
 | ![Home Screen](screenshots/home_screen.png) | ![Compass Screen](screenshots/compass_screen.png) | ![Map Screen](screenshots/map_screen.png) |
 
-| Location Disabled (Home) | Location Disabled (Map) |
-| :---: | :---: |
-| ![Location Disabled Home](screenshots/location_disabled_home.png) | ![Location Disabled Map](screenshots/location_disabled_map.png) |
+| Location Disabled (Home) |
+| :---: |
+| ![Location Disabled Home](screenshots/location_disabled_home.png)
 
 ---
 
