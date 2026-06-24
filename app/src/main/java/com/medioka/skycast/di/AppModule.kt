@@ -20,6 +20,7 @@ import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
 import com.medioka.skycast.ui.home.HomeViewModel
 import com.medioka.skycast.ui.map.MapViewModel
+import com.medioka.skycast.ui.compass.CompassViewModel
 import org.koin.dsl.bind
 
 import org.koin.dsl.module
@@ -90,6 +91,7 @@ val useCaseModule = module {
 val viewModelModule = module {
     viewModelOf(::HomeViewModel)
     viewModelOf(::MapViewModel)
+    viewModelOf(::CompassViewModel)
 }
 
 val appModule = listOf(

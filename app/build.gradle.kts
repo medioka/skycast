@@ -40,6 +40,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
     implementation("androidx.compose.material:material-icons-core")
+    implementation("androidx.compose.material:material-icons-extended")
 
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -75,9 +76,7 @@ dependencies {
     // OpenStreetMap library
     implementation(libs.osmdroid.android)
 
-    // Firebase Notifications
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.messaging.ktx)
+
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -21,6 +22,7 @@ import androidx.navigation.compose.rememberNavController
 import com.medioka.skycast.ui.home.HomeScreen
 import com.medioka.skycast.ui.home.HomeViewModel
 import com.medioka.skycast.ui.map.MapScreen
+import com.medioka.skycast.ui.compass.CompassScreen
 import com.medioka.skycast.ui.theme.WeatherAppTheme
 import org.koin.android.ext.android.inject
 
@@ -38,13 +40,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-<<<<<<< HEAD
-=======
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        handleIntent(intent)
-    }
+
 
     override fun onResume() {
         super.onResume()
@@ -61,40 +57,24 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun handleIntent(intent: Intent?) {
-        val targetScreen = intent?.getStringExtra("target_screen") ?: intent?.getStringExtra("screen")
-        if (targetScreen != null) {
-            pendingRoute.value = if (targetScreen.equals("home", ignoreCase = true) || targetScreen.equals("weather", ignoreCase = true)) {
-                "home"
-            } else {
-                "map"
-            }
-        }
-    }
 
->>>>>>> d032623 (feat: Implement LocationPermissionDeniedView and LocationDisabledView for robust location error handling on HomeScreen)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-<<<<<<< HEAD
-        // Trigger location permissions on start
-        requestPermissionLauncher.launch(
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            )
-=======
         
         val permissions = mutableListOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION
->>>>>>> 450c399 (refactor: Remove all code comments from Kotlin source files)
         )
+        requestPermissionLauncher.launch(permissions.toTypedArray())
 
         setContent {
             WeatherAppTheme {
                 val navController = rememberNavController()
+
+
 
                 Surface(modifier = Modifier.fillMaxSize()) {
                     NavHost(
@@ -122,6 +102,9 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToMap = {
                                     navController.navigate("map")
                                 },
+                                onNavigateToCompass = {
+                                    navController.navigate("compass")
+                                },
                                 viewModel = homeViewModel
                             )
                         }
@@ -129,11 +112,18 @@ class MainActivity : ComponentActivity() {
                         composable("map") {
                             MapScreen(
                                 onLocationSelected = { lat, lon ->
-                                    
                                     navController.previousBackStackEntry?.savedStateHandle
                                         ?.set("selected_location", doubleArrayOf(lat, lon))
                                     navController.popBackStack()
                                 },
+                                onBackClick = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+
+                        composable("compass") {
+                            CompassScreen(
                                 onBackClick = {
                                     navController.popBackStack()
                                 }
