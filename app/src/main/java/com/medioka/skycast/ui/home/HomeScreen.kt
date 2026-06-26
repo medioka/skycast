@@ -1,5 +1,13 @@
 package com.medioka.skycast.ui.home
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.LocationManager
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -22,10 +30,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.SignalCellularAlt
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -36,21 +45,32 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.medioka.skycast.domain.model.WeatherInfo
 import com.medioka.skycast.ui.common.DashboardErrorView
 import com.medioka.skycast.ui.common.DashboardSkeleton
+import com.medioka.skycast.ui.common.LocationDisabledView
+import com.medioka.skycast.ui.common.LocationPermissionDeniedView
 import com.medioka.skycast.ui.common.WeatherIllustration
-import com.medioka.skycast.ui.theme.Background
+import com.medioka.skycast.ui.network.NetworkMonitor
 import com.medioka.skycast.ui.theme.GradientEnd
 import com.medioka.skycast.ui.theme.GradientStart
 import com.medioka.skycast.ui.theme.HeadlineLgMobileTextStyle
@@ -58,29 +78,8 @@ import com.medioka.skycast.ui.theme.HeroTempTextStyle
 import com.medioka.skycast.ui.theme.LabelSmTextStyle
 import com.medioka.skycast.ui.theme.Primary
 import com.medioka.skycast.ui.theme.PrimaryContainer
-import com.medioka.skycast.ui.theme.Secondary
 import com.medioka.skycast.ui.theme.Tertiary
 import org.koin.androidx.compose.koinViewModel
-
-import android.Manifest
-import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.location.LocationManager
-import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.core.content.ContextCompat
-import com.medioka.skycast.ui.common.LocationPermissionDeniedView
-import com.medioka.skycast.ui.common.LocationDisabledView
 
 private fun isLocationPermissionGranted(context: Context): Boolean {
     val fineGranted = ContextCompat.checkSelfPermission(
@@ -110,6 +109,7 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val networkStatus by viewModel.networkStatus.collectAsState()
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -256,6 +256,7 @@ fun HomeScreen(
                                 DashboardContent(
                                     weatherInfo = state.weatherInfo,
                                     isOffline = state.isOffline,
+                                    networkStatus = networkStatus,
                                     onRefresh = {
                                         viewModel.fetchWeather(
                                             state.weatherInfo.coordinate.latitude,
@@ -288,6 +289,7 @@ fun HomeScreen(
 private fun DashboardContent(
     weatherInfo: WeatherInfo,
     isOffline: Boolean,
+    networkStatus: NetworkMonitor.NetworkStatus,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -406,6 +408,9 @@ private fun DashboardContent(
                 }
             }
         }
+
+        // Real-time network health diagnostics widget
+        NetworkStatusCard(status = networkStatus)
 
         
         FlowRow(
@@ -526,5 +531,139 @@ private fun DashboardContent(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+@Composable
+private fun NetworkStatusCard(
+    status: NetworkMonitor.NetworkStatus,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
+            .padding(20.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val icon = when (status.type) {
+                    NetworkMonitor.NetworkType.WIFI -> Icons.Default.Wifi
+                    NetworkMonitor.NetworkType.CELLULAR -> Icons.Default.SignalCellularAlt
+                    else -> Icons.Default.CloudOff
+                }
+                val iconColor = if (status.isConnected) Primary else Color(0xFFFFB4AB)
+                Icon(
+                    imageVector = icon,
+                    contentDescription = "Network Status Icon",
+                    tint = iconColor,
+                    modifier = Modifier.size(24.dp)
+                )
+                Column {
+                    Text(
+                        text = "Network Status",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    Text(
+                        text = if (status.isConnected) "Connected (${status.type.name})" else "Disconnected",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 12.sp
+                    )
+                }
+            }
+
+            if (status.isConnected) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "CONNECTION TYPE",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = status.type.name,
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    if (status.carrierName != null) {
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "CARRIER / OPERATOR",
+                                color = Color.White.copy(alpha = 0.5f),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = status.carrierName,
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "ESTIMATED SPEED",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        val speedText = if (status.bandwidthKbps > 1000) {
+                            "${"%.1f".format(status.bandwidthKbps / 1000f)} Mbps"
+                        } else {
+                            "${status.bandwidthKbps} Kbps"
+                        }
+                        Text(
+                            text = speedText,
+                            color = Tertiary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "DATA PLAN",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (status.isMetered) "Metered" else "Unmetered / Unlimited",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "You are currently offline. Check your cellular data or Wi-Fi settings to connect to the internet and fetch real-time weather updates.",
+                    color = Color(0xFFFFB4AB),
+                    fontSize = 12.sp
+                )
+            }
+        }
     }
 }

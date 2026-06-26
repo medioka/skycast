@@ -28,6 +28,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 
+import com.medioka.skycast.ui.network.NetworkMonitor
+
 val networkModule = module {
     single {
         Json {
@@ -60,6 +62,10 @@ val networkModule = module {
 
     single {
         get<Retrofit>().create(WeatherApiService::class.java)
+    }
+
+    single {
+        NetworkMonitor(androidContext())
     }
 }
 

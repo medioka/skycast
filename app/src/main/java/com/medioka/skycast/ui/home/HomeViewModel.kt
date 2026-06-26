@@ -2,19 +2,29 @@ package com.medioka.skycast.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.medioka.skycast.domain.repository.WeatherRepository
 import com.medioka.skycast.domain.usecase.GetWeatherUseCase
+import com.medioka.skycast.ui.network.NetworkMonitor
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
-import com.medioka.skycast.domain.repository.WeatherRepository
 
 class HomeViewModel(
     private val getWeatherUseCase: GetWeatherUseCase,
-    private val weatherRepository: WeatherRepository
+    private val weatherRepository: WeatherRepository,
+    networkMonitor: NetworkMonitor
 ) : ViewModel() {
+
+    val networkStatus: StateFlow<NetworkMonitor.NetworkStatus> = networkMonitor.networkStatusFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000L),
+            initialValue = networkMonitor.getCurrentNetworkStatus()
+        )
 
     fun getDefaultCoordinates(): Pair<Double, Double> {
         return weatherRepository.getDefaultLocation() ?: Pair(51.5074, -0.1278)
@@ -70,7 +80,7 @@ class HomeViewModel(
                                             cachedWeather = null
                                         )
                                     }
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                     _uiState.value = HomeUiState.Error(
                                         message = error.localizedMessage ?: "Network connection failed",
                                         cachedWeather = null
